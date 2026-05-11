@@ -45,6 +45,93 @@ def monto_a_letras(monto):
     literal = num2words(entero, lang='es').upper()
     return f"{literal} {decimales:02d}/100"
 
+# --- FUNCION DEL PDF MODIFICADA PARA CUARTA HOJA (10.5cm x 14cm) ---
+def generar_pdf_individual(datos, monto_t, c_nombre, f_pago, h_pago, n_form):
+    # Dimensiones en puntos para cuarta hoja carta vertical
+    # 10.5 cm de ancho x 14 cm de alto
+    ancho_puntos = 298   # 10.5 cm convertido a puntos
+    alto_puntos = 397    # 14 cm convertido a puntos
+    
+    buf = io.BytesIO()
+    c_pdf = canvas.Canvas(buf, pagesize=(ancho_puntos, alto_puntos))
+    w = ancho_puntos
+    h = alto_puntos
+    
+    # Margenes ajustados al nuevo tamaño
+    m_sup = 15          # margen superior
+    m_izq = 10          # margen izquierdo
+    m_der = w - 10      # margen derecho
+    
+    # Formatear numero de formulario con 5 digitos
+    f_num = str(n_form).zfill(5)
+    
+    # Obtener datos necesarios
+    acciones = int(float(datos.get("acciones") or 0))
+    importe_individual = float(datos.get("importe_accion") or 0)
+    
+    # Dibujar borde exterior del comprobante
+    c_pdf.setLineWidth(0.6)
+    c_pdf.rect(m_izq, h - (m_sup + 280), m_der - m_izq, 280)
+    
+    # Lineas divisorias internas
+    c_pdf.line(m_izq, h - (m_sup + 80), m_der, h - (m_sup + 80))
+    c_pdf.line(m_izq, h - (m_sup + 125), m_der, h - (m_sup + 125))
+    c_pdf.line(m_izq, h - (m_sup + 195), m_der, h - (m_sup + 195))
+    c_pdf.line(m_izq, h - (m_sup + 240), m_der, h - (m_sup + 240))
+    c_pdf.line(m_izq + 90, h - (m_sup + 240), m_izq + 90, h - (m_sup + 280))
+    
+    # === CABECERA ===
+    c_pdf.setFont("Helvetica", 7)
+    c_pdf.drawString(m_izq + 5, h - (m_sup + 20), "COOPROLE R.L.")
+    c_pdf.drawString(m_izq + 5, h - (m_sup + 30), "COCHABAMBA - BOLIVIA")
+    c_pdf.drawString(m_izq + 5, h - (m_sup + 40), f"Fecha : {f_pago}")
+    c_pdf.drawString(m_izq + 5, h - (m_sup + 50), f"Hora  : {h_pago}")
+    
+    # Titulo principal
+    c_pdf.setFont("Helvetica-Bold", 9)
+    c_pdf.drawCentredString(w/2, h - (m_sup + 38), "COMPROBANTE DE PAGO")
+    
+    # Datos de serie y numero de formulario (lado derecho)
+    c_pdf.setFont("Helvetica", 7)
+    c_pdf.drawString(m_der - 100, h - (m_sup + 20), f"SERIE:    {datos.get('serie','')}")
+    c_pdf.drawString(m_der - 100, h - (m_sup + 30), f"{datos.get('nombre_serie','')[:20]}")
+    c_pdf.setFont("Helvetica-Bold", 8)
+    c_pdf.drawString(m_der - 100, h - (m_sup + 45), f"Nro :    {f_num}")
+    
+    # === ZONA DE DATOS DEL TITULO ===
+    c_pdf.setFont("Helvetica", 7)
+    c_pdf.drawString(m_izq + 10, h - (m_sup + 95), f"TITULO:    {datos.get('titulo')}")
+    c_pdf.drawString(m_izq + 5, h - (m_sup + 110), f"Numero de Acciones:    {acciones}")
+    c_pdf.drawString(w/2 + 15, h - (m_sup + 110), f"Imp. x accion:    {importe_individual:.2f}")
+    
+    # === ZONA DE MONTOS ===
+    c_pdf.setFont("Helvetica-Bold", 8)
+    c_pdf.drawString(w/2 - 35, h - (m_sup + 152), f"Monto Total (Bs.):    {monto_t:.2f}")
+    c_pdf.line(w/2 - 35, h - (m_sup + 160), w/2 + 80, h - (m_sup + 160))
+    c_pdf.drawString(w/2 - 35, h - (m_sup + 175), f"Importe a Pagar:    {monto_t:.2f}")
+    
+    # === ZONA DE LITERAL Y CONCEPTO ===
+    c_pdf.setFont("Helvetica", 6.5)
+    literal_completo = monto_a_letras(monto_t)
+    if len(literal_completo) > 50:
+        literal_completo = literal_completo[:47] + "..."
+    c_pdf.drawString(m_izq + 5, h - (m_sup + 205), f"Son:    {literal_completo}")
+    c_pdf.drawString(m_der - 55, h - (m_sup + 205), "(Bs.-)")
+    
+    c_pdf.drawString(m_izq + 5, h - (m_sup + 218), "Concepto: PAGO DE DIVIDENDOS PROLEC S.A.")
+    c_pdf.drawString(w/2 + 30, h - (m_sup + 218), "Gestion:    2025")
+    
+    # === ZONA DE FIRMAS (parte inferior) ===
+    c_pdf.setFont("Helvetica", 6)
+    c_pdf.drawString(m_izq + 3, h - (m_sup + 255), f"Cajero: {c_nombre}")
+    c_pdf.setFont("Helvetica", 6.5)
+    c_pdf.drawString(m_izq + 100, h - (m_sup + 245), f"Recibi Conforme:    {datos.get('nombre')}")
+    c_pdf.drawString(m_izq + 100, h - (m_sup + 260), "Firma: ...............................................")
+    c_pdf.drawString(m_der - 110, h - (m_sup + 260), "C.I. ..........................")
+    
+    c_pdf.save()
+    return buf.getvalue()
+
 # --- LOGIN ---
 if not st.session_state.cajero:
     st.title("Acceso al Sistema de Cobros")
@@ -85,7 +172,8 @@ else:
             try:
                 t_limpio = titulo_input.strip()
                 res = supabase.table("riego").select("*").eq("titulo", t_limpio).execute()
-                if not res.data and t_limpio.isdigit(): res = supabase.table("riego").select("*").eq("titulo", int(t_limpio)).execute()
+                if not res.data and t_limpio.isdigit(): 
+                    res = supabase.table("riego").select("*").eq("titulo", int(t_limpio)).execute()
 
                 if res.data:
                     socio = res.data[0]
@@ -101,109 +189,23 @@ else:
                         st.write(f"**Titulo:** {socio.get('titulo')}")
                         st.write(f"**Nro. Formulario:** {str(nro_form_raw).zfill(5) if nro_form_raw else 'PENDIENTE'}")
                     with col2:
-                        st.write(f"**Acciones:** {acciones}"); st.write(f"**Valor Accion:** {importe_individual:.2f} Bs.")
+                        st.write(f"**Acciones:** {acciones}")
+                        st.write(f"**Valor Accion:** {importe_individual:.2f} Bs.")
                     with col3:
                         st.metric("Total", f"{total:.2f} Bs.")
                     st.divider()
 
-                    # MODIFICACION: Funcion generar_pdf_individual actualizada para cuarta hoja carta vertical
-                    # Dimensiones: 10.5 cm de ancho x 14 cm de alto
-                    # Conversion a puntos (1 punto = 1/72 pulgada, 1 pulgada = 2.54 cm)
-                    # Ancho: 10.5 cm = (10.5 / 2.54) * 72 = 297.64 puntos ~ 298 puntos
-                    # Alto: 14 cm = (14 / 2.54) * 72 = 396.85 puntos ~ 397 puntos
-                    def generar_pdf_individual(datos, monto_t, c_nombre, f_pago, h_pago, n_form):
-                        # Dimensiones en puntos para cuarta hoja carta vertical
-                        ancho_puntos = 298   # 10.5 cm
-                        alto_puntos = 397    # 14 cm
-                        
-                        # Crear canvas con tamaño personalizado
-                        buf = io.BytesIO()
-                        from reportlab.lib.pagesizes import pagesize
-                        c_pdf = canvas.Canvas(buf, pagesize=(ancho_puntos, alto_puntos))
-                        w = ancho_puntos
-                        h = alto_puntos
-                        
-                        # Configurar margenes ajustados al nuevo tamaño
-                        m_sup = 15          # margen superior reducido
-                        m_izq = 10          # margen izquierdo reducido
-                        m_der = w - 10      # margen derecho
-                        
-                        # Formatear numero de formulario con 5 digitos
-                        f_num = str(n_form).zfill(5)
-                        
-                        # Dibujar borde exterior del comprobante
-                        c_pdf.setLineWidth(0.6)
-                        c_pdf.rect(m_izq, h - (m_sup + 280), m_der - m_izq, 280)
-                        
-                        # Lineas divisorias internas ajustadas al nuevo tamaño
-                        c_pdf.line(m_izq, h - (m_sup + 80), m_der, h - (m_sup + 80))   # Linea zona de firma
-                        c_pdf.line(m_izq, h - (m_sup + 125), m_der, h - (m_sup + 125)) # Linea concepto y monto literal
-                        c_pdf.line(m_izq, h - (m_sup + 195), m_der, h - (m_sup + 195)) # Linea monto total e importe por accion
-                        c_pdf.line(m_izq, h - (m_sup + 240), m_der, h - (m_sup + 240)) # Linea datos del titulo y acciones
-                        c_pdf.line(m_izq + 90, h - (m_sup + 240), m_izq + 90, h - (m_sup + 280)) # Linea vertical separadora
-                        
-                        # === CABECERA ===
-                        c_pdf.setFont("Helvetica", 7)
-                        c_pdf.drawString(m_izq + 5, h - (m_sup + 20), "COOPROLE R.L.")
-                        c_pdf.drawString(m_izq + 5, h - (m_sup + 30), "COCHABAMBA - BOLIVIA")
-                        c_pdf.drawString(m_izq + 5, h - (m_sup + 40), f"Fecha : {f_pago}")
-                        c_pdf.drawString(m_izq + 5, h - (m_sup + 50), f"Hora  : {h_pago}")
-                        
-                        # Titulo principal
-                        c_pdf.setFont("Helvetica-Bold", 9)
-                        c_pdf.drawCentredString(w/2, h - (m_sup + 38), "COMPROBANTE DE PAGO")
-                        
-                        # Datos de serie y numero de formulario (lado derecho)
-                        c_pdf.setFont("Helvetica", 7)
-                        c_pdf.drawString(m_der - 100, h - (m_sup + 20), f"SERIE:    {datos.get('serie','')}")
-                        c_pdf.drawString(m_der - 100, h - (m_sup + 30), f"{datos.get('nombre_serie','')[:20]}")
-                        c_pdf.setFont("Helvetica-Bold", 8)
-                        c_pdf.drawString(m_der - 100, h - (m_sup + 45), f"Nro :    {f_num}")
-                        
-                        # === ZONA DE DATOS DEL TITULO ===
-                        c_pdf.setFont("Helvetica", 7)
-                        c_pdf.drawString(m_izq + 10, h - (m_sup + 95), f"TITULO:    {datos.get('titulo')}")
-                        c_pdf.drawString(m_izq + 5, h - (m_sup + 110), f"Numero de Acciones:    {acciones}")
-                        c_pdf.drawString(w/2 + 15, h - (m_sup + 110), f"Imp. x accion:    {importe_individual:.2f}")
-                        
-                        # === ZONA DE MONTOS ===
-                        c_pdf.setFont("Helvetica-Bold", 8)
-                        c_pdf.drawString(w/2 - 35, h - (m_sup + 152), f"Monto Total (Bs.):    {monto_t:.2f}")
-                        c_pdf.line(w/2 - 35, h - (m_sup + 160), w/2 + 80, h - (m_sup + 160))
-                        c_pdf.drawString(w/2 - 35, h - (m_sup + 175), f"Importe a Pagar:    {monto_t:.2f}")
-                        
-                        # === ZONA DE LITERAL Y CONCEPTO ===
-                        c_pdf.setFont("Helvetica", 6.5)
-                        literal_completo = monto_a_letras(monto_t)
-                        # Truncar literal si es muy largo para la cuarta hoja
-                        if len(literal_completo) > 50:
-                            literal_completo = literal_completo[:47] + "..."
-                        c_pdf.drawString(m_izq + 5, h - (m_sup + 205), f"Son:    {literal_completo}")
-                        c_pdf.drawString(m_der - 55, h - (m_sup + 205), "(Bs.-)")
-                        
-                        c_pdf.drawString(m_izq + 5, h - (m_sup + 218), "Concepto: PAGO DE DIVIDENDOS PROLEC S.A.")
-                        c_pdf.drawString(w/2 + 30, h - (m_sup + 218), "Gestion:    2025")
-                        
-                        # === ZONA DE FIRMAS (parte inferior) ===
-                        c_pdf.setFont("Helvetica", 6)
-                        c_pdf.drawString(m_izq + 3, h - (m_sup + 255), f"Cajero: {c_nombre}")
-                        c_pdf.setFont("Helvetica", 6.5)
-                        c_pdf.drawString(m_izq + 100, h - (m_sup + 245), f"Recibi Conforme:    {datos.get('nombre')}")
-                        c_pdf.drawString(m_izq + 100, h - (m_sup + 260), "Firma: ...............................................")
-                        c_pdf.drawString(m_der - 110, h - (m_sup + 260), "C.I. ..........................")
-                        
-                        c_pdf.save()
-                        return buf.getvalue()
-
                     if socio.get("pagado"):
-                        st.subheader("⚠️ YA FUE PAGADO POR")
+                        st.subheader(" YA FUE PAGADO POR")
                         st.warning(f"Cajero: {socio.get('cajero')} | Fecha: {socio.get('fecha')} | Hora: {socio.get('hora')} | Formulario: {str(socio.get('nro_formulario')).zfill(5)}")
                         pdf_byte = generar_pdf_individual(socio, total, socio.get('cajero'), socio.get('fecha'), socio.get('hora'), socio.get('nro_formulario'))
                         st.download_button("Descargar Comprobante PDF", pdf_byte, f"comprobante_{t_limpio}.pdf")
                     else:
                         st.error("Estado: Pendiente de cobro")
                         if not st.session_state.confirmar_pago:
-                            if st.button("REGISTRAR PAGO AHORA"): st.session_state.confirmar_pago = True; st.rerun()
+                            if st.button("REGISTRAR PAGO AHORA"): 
+                                st.session_state.confirmar_pago = True
+                                st.rerun()
                         else:
                             st.warning(f"CONFIRMACION: ¿Pagar a {socio.get('nombre')}?")
                             c_s, c_n = st.columns(2)
@@ -229,20 +231,24 @@ else:
                                     st.rerun()
                 else:
                     st.error("El título buscado no existe en la lista")
-            except Exception as e:
+            except Exception as e: 
                 st.error(f"Error: {e}")
 
     # --- OPCION 2: LISTADO DE COBROS ---
     elif menu == "Listado de Cobros":
         st.title("Reporte de Cobros Realizados")
         c1, c2 = st.columns(2)
-        with c1: f_ini = st.date_input("Fecha Inicial", datetime.date.today())
-        with c2: f_fin = st.date_input("Fecha Final", datetime.date.today())
+        with c1: 
+            f_ini = st.date_input("Fecha Inicial", datetime.date.today())
+        with c2: 
+            f_fin = st.date_input("Fecha Final", datetime.date.today())
+        
         res_opciones = supabase.table("riego").select("serie, cajero").eq("pagado", True).execute()
         opciones_serie = sorted(list(set([s['serie'] for s in res_opciones.data if s['serie']])))
         opciones_cajero = sorted(list(set([c['cajero'] for c in res_opciones.data if c['cajero']])))
         series_sel = st.multiselect("Series:", opciones_serie)
         cajeros_sel = st.multiselect("Cajeros:", opciones_cajero)
+        
         if st.button("Generar Reporte PDF"):
             res_pagos = supabase.table("riego").select("*").eq("pagado", True).execute()
             if res_pagos.data:
@@ -255,8 +261,9 @@ else:
                     items_per_page = 40
                     pages = [filtrados[i:i + items_per_page] for i in range(0, len(filtrados), items_per_page)]
                     total_dinero = sum(float(x.get('importe_accion') or 0) * int(float(x.get('acciones') or 0)) for x in filtrados)
+                    
                     for idx, page_data in enumerate(pages):
-                        if os.path.exists("logo_izquierdo.png"):
+                        if os.path.exists("logo_izquierdo.png"): 
                             c_list.drawImage("logo_izquierdo.png", 40, h - 65, width=65, height=65, preserveAspectRatio=True, mask='auto')
                         c_list.setFont("Helvetica-Bold", 14)
                         c_list.drawCentredString(w/2, h - 35, "REPORTE DE COBROS DE DIVIDENDOS")
@@ -283,6 +290,7 @@ else:
                         c_list.drawCentredString(545, y_t, "TOTAL")
                         c_list.line(40, y_t - 5, w - 40, y_t - 5)
                         y_row = y_t - 20
+                        
                         for item in page_data:
                             sub = float(item.get('importe_accion') or 0) * int(float(item.get('acciones') or 0))
                             c_list.setFont("Helvetica", 6.5)
@@ -295,9 +303,10 @@ else:
                             c_list.drawCentredString(440, y_row, f"{float(item.get('importe_accion')):.2f}")
                             c_list.drawCentredString(495, y_row, f"{item.get('nro_formulario')}")
                             c_list.drawCentredString(545, y_row, f"{sub:.2f}")
-                            y_row -= 15
+                            y_row -= 15 
+                        
                         if idx+1 == len(pages):
-                            if y_row < 60:
+                            if y_row < 60: 
                                 c_list.showPage()
                                 y_row = h - 50
                             c_list.setLineWidth(1.2)
@@ -307,17 +316,19 @@ else:
                             c_list.drawString(350, y_row - 15, "TOTAL BS.")
                             c_list.drawRightString(560, y_row - 15, f"{total_dinero:.2f}")
                         c_list.showPage()
+                    
                     c_list.save()
                     st.download_button("Descargar Reporte PDF", buf_list.getvalue(), "reporte_cobros.pdf")
-                else:
+                else: 
                     st.warning("No hay registros.")
 
     # --- OPCION 3: REVERSION DE COBROS ---
     elif menu == "Reversión de Cobros":
         st.title("Reversión / Anulación")
-        if "mensaje_exito_rev" in st.session_state:
+        if "mensaje_exito_rev" in st.session_state: 
             st.success(st.session_state.mensaje_exito_rev)
             del st.session_state.mensaje_exito_rev
+        
         form_busca_text = st.text_input("Nro Formulario a anular:", key=f"rev_input_{st.session_state.rev_search_key}")
         if form_busca_text:
             t_busca = form_busca_text.strip()
@@ -330,9 +341,9 @@ else:
                         hoy_bol = datetime.datetime.now(tz_bol).strftime("%d/%m/%Y")
                         rol = str(st.session_state.rol_usuario).strip()
                         if rol == "Administrador" or (socio_rev.get('cajero') == st.session_state.cajero and socio_rev.get('fecha') == hoy_bol):
-                            st.warning(f"Form: {t_busca} - Socio: {socio_rev.get('nombre')}")
+                            st.warning(f"Form: {t_busca} - Socio: {socio_rev.get('nombre')}") 
                             if not st.session_state.confirmar_reversion:
-                                if st.button("ANULAR FORMULARIO"):
+                                if st.button("ANULAR FORMULARIO"): 
                                     st.session_state.confirmar_reversion = True
                                     st.rerun()
                             else:
@@ -360,24 +371,27 @@ else:
                                         st.session_state.rev_search_key += 1
                                         st.rerun()
                                 with c_n:
-                                    if st.button("NO, CANCELAR"):
+                                    if st.button("NO, CANCELAR"): 
                                         st.session_state.confirmar_reversion = False
                                         st.rerun()
-                        else:
+                        else: 
                             st.error("ERROR: Solo Administrador puede anular otros días/cajeros.")
-                    else:
+                    else: 
                         st.error("No se encontró un cobro activo con ese número de formulario.")
-                except Exception as e:
+                except Exception as e: 
                     st.error(f"Error en la base de datos: {e}")
-            else:
+            else: 
                 st.error("Por favor, ingrese solo números para el formulario.")
 
     # --- OPCION 4: REPORTE DE REVERSIONES ---
     elif menu == "Reporte de Reversiones":
         st.title("Reporte de Anulados")
         c1, c2 = st.columns(2)
-        with c1: f_ini = st.date_input("Inicio", datetime.date.today())
-        with c2: f_fin = st.date_input("Fin", datetime.date.today())
+        with c1: 
+            f_ini = st.date_input("Inicio", datetime.date.today())
+        with c2: 
+            f_fin = st.date_input("Fin", datetime.date.today())
+        
         if st.button("Generar Reporte"):
             res_p = supabase.table("reversiones").select("*").execute()
             if res_p.data:
@@ -388,8 +402,9 @@ else:
                     w, h = portrait(letter)
                     pages = [filtrados[i:i + 40] for i in range(0, len(filtrados), 40)]
                     total_dinero = sum(float(x.get('importe_accion') or 0) * int(float(x.get('acciones') or 0)) for x in filtrados)
+                    
                     for idx, page_data in enumerate(pages):
-                        if os.path.exists("logo_izquierdo.png"):
+                        if os.path.exists("logo_izquierdo.png"): 
                             c_list.drawImage("logo_izquierdo.png", 40, h - 65, width=65, height=65, preserveAspectRatio=True, mask='auto')
                         c_list.setFont("Helvetica-Bold", 14)
                         c_list.drawCentredString(w/2, h - 35, "REPORTE DE ANULACIONES")
@@ -411,6 +426,7 @@ else:
                         c_list.drawCentredString(555, y_t, "TOTAL")
                         c_list.line(40, y_t - 5, w - 40, y_t - 5)
                         y_row = y_t - 20
+                        
                         for item in page_data:
                             sub = float(item.get('importe_accion') or 0) * int(float(item.get('acciones') or 0))
                             c_list.setFont("Helvetica", 6.5)
@@ -424,8 +440,9 @@ else:
                             c_list.drawCentredString(510, y_row, f"{item.get('nro_formulario')}")
                             c_list.drawCentredString(555, y_row, f"{sub:.2f}")
                             y_row -= 16
+                        
                         if idx+1 == len(pages):
-                            if y_row < 60:
+                            if y_row < 60: 
                                 c_list.showPage()
                                 y_row = h - 50
                             c_list.setLineWidth(1.2)
@@ -434,7 +451,8 @@ else:
                             c_list.drawString(350, y_row - 15, "TOTAL ANULADO BS.")
                             c_list.drawRightString(560, y_row - 15, f"{total_dinero:.2f}")
                         c_list.showPage()
+                    
                     c_list.save()
                     st.download_button("Descargar Reporte", buf_list.getvalue(), "reporte_reversiones.pdf")
-                else:
+                else: 
                     st.warning("Sin datos.")
