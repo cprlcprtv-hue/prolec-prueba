@@ -1,7 +1,7 @@
 import streamlit as st
 
 # 1. CONFIGURACION DE PAGINA AL INICIO ABSOLUTO
-st.set_page_config(page_title="Sistema Prolec - Bolivia", layout="wide")
+st.set_page_config(page_title="PRUEBAS Sistema Prolec", layout="wide")
 
 from supabase import create_client, Client
 import datetime
