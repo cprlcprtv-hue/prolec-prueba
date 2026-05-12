@@ -115,6 +115,7 @@ else:
                         c_pdf.line(m_izq, h - (m_sup + 250), m_der, h - (m_sup + 250)) 
                         c_pdf.line(m_izq, h - (m_sup + 310), m_der, h - (m_sup + 310)) 
                         c_pdf.line(m_izq + 120, h - (m_sup + 310), m_izq + 120, h - (m_sup + 360)) 
+                        # CAMBIO 1: Usar fuente sans serif (Helvetica es sans serif, se mantiene pero aseguramos)
                         c_pdf.setFont("Helvetica", 9); c_pdf.drawString(m_izq + 10, h - (m_sup + 25), "COOPROLE R.L."); c_pdf.drawString(m_izq + 10, h - (m_sup + 40), "COCHABAMBA - BOLIVIA"); c_pdf.drawString(m_izq + 10, h - (m_sup + 55), f"Fecha : {f_pago}"); c_pdf.drawString(m_izq + 10, h - (m_sup + 70), f"Hora  : {h_pago}")
                         c_pdf.setFont("Helvetica-Bold", 12); c_pdf.drawCentredString(w/2, h - (m_sup + 50), "COMPROBANTE DE PAGO")
                         c_pdf.setFont("Helvetica", 10); c_pdf.drawString(m_der - 150, h - (m_sup + 25), f"SERIE:    {socio.get('serie','')}"); c_pdf.drawString(m_der - 150, h - (m_sup + 40), f"{socio.get('nombre_serie','')}"); c_pdf.setFont("Helvetica-Bold", 11); c_pdf.drawString(m_der - 150, h - (m_sup + 60), f"Nro :    {f_num}")
@@ -122,7 +123,9 @@ else:
                         c_pdf.setFont("Helvetica-Bold", 11); c_pdf.drawString(w/2 - 40, h - (m_sup + 190), f"Monto Total (Bs.):    {monto_t:.2f}"); c_pdf.line(w/2 - 40, h - (m_sup + 205), w/2 + 100, h - (m_sup + 205)); c_pdf.drawString(w/2 - 40, h - (m_sup + 230), f"Importe a Pagar Bs.:    {monto_t:.2f}")
                         c_pdf.setFont("Helvetica", 10); c_pdf.drawString(m_izq + 10, h - (m_sup + 270), f"Son:    {monto_a_letras(monto_t)}"); c_pdf.drawString(m_der - 80, h - (m_sup + 270), "(Bs.-)")
                         c_pdf.drawString(m_izq + 10, h - (m_sup + 295), "Concepto: PAGO DE DIVIDENDOS PROLEC S.A."); c_pdf.drawString(w/2 + 20, h - (m_sup + 295), "Gestion:    2025")
-                        c_pdf.setFont("Helvetica", 8); c_pdf.drawString(m_izq + 5, h - (m_sup + 345), f"Cajero: {c_nombre}"); c_pdf.setFont("Helvetica", 9); c_pdf.drawString(m_izq + 130, h - (m_sup + 330), f"Recibi Conforme:    {datos.get('nombre')}"); c_pdf.drawString(m_izq + 130, h - (m_sup + 350), "Firma: ..............................................."); c_pdf.drawString(m_der - 140, h - (m_sup + 350), "C.I. ..........................")
+                        c_pdf.setFont("Helvetica", 8); c_pdf.drawString(m_izq + 5, h - (m_sup + 345), f"Cajero: {c_nombre}")
+                        # CAMBIO 2: Bajar "Recibi Conforme" y la línea de firma 15 puntos más abajo (de -330 a -315 y de -350 a -335)
+                        c_pdf.setFont("Helvetica", 9); c_pdf.drawString(m_izq + 130, h - (m_sup + 315), f"Recibi Conforme:    {datos.get('nombre')}"); c_pdf.drawString(m_izq + 130, h - (m_sup + 335), "Firma: ..............................................."); c_pdf.drawString(m_der - 140, h - (m_sup + 350), "C.I. ..........................")
                         c_pdf.showPage(); c_pdf.save(); return buf.getvalue()
 
                     if socio.get("pagado"):
