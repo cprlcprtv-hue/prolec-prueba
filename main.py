@@ -107,18 +107,16 @@ else:
                     st.divider()
 
                     def generar_pdf_individual(datos, monto_t, c_nombre, f_pago, h_pago, n_form):
-                        # TAMAÑO CUARTO DE HOJA CARTA: 10.5cm x 14cm
-                        # Conversion: 1 cm = 28.3464567 puntos
+                        # Tamaño cuarto de hoja carta: 10.5cm x 14cm
                         ancho_cm = 10.5
                         alto_cm = 14.0
                         margen_cm = 0.7
                         
-                        ancho_pts = ancho_cm * 28.3464567   # 297.64 puntos
-                        alto_pts = alto_cm * 28.3464567     # 396.85 puntos
-                        margen_pts = margen_cm * 28.3464567 # 19.84 puntos
+                        ancho_pts = ancho_cm * 28.3464567
+                        alto_pts = alto_cm * 28.3464567
+                        margen_pts = margen_cm * 28.3464567
                         
                         buf = io.BytesIO()
-                        # Crear canvas con tamaño personalizado (cuarto de hoja)
                         c_pdf = canvas.Canvas(buf, pagesize=(ancho_pts, alto_pts))
                         w = ancho_pts
                         h = alto_pts
@@ -129,77 +127,87 @@ else:
                         m_der = w - margen_pts
                         m_inf = margen_pts
                         
+                        # Limpiar y acortar nombre del socio si es muy largo
+                        nombre_socio = datos.get('nombre', '')
+                        if len(nombre_socio) > 30:
+                            nombre_socio = nombre_socio[:28] + '...'
+                        
+                        # Limpiar nombre de serie
+                        nombre_serie = socio.get('nombre_serie', '')
+                        if len(nombre_serie) > 12:
+                            nombre_serie = nombre_serie[:10]
+                        
                         # Rectangulo principal
                         c_pdf.setLineWidth(0.5)
                         c_pdf.rect(m_izq, m_inf, m_der - m_izq, h - m_sup - m_inf)
                         
-                        # Lineas horizontales divisorias
-                        y_linea1 = h - m_sup - 28
-                        y_linea2 = h - m_sup - 52
-                        y_linea3 = h - m_sup - 76
-                        y_linea4 = h - m_sup - 100
-                        y_linea5 = h - m_sup - 130
+                        # Lineas horizontales divisorias - mejor distribuidas
+                        y1 = h - m_sup - 22   # Despues de encabezado
+                        y2 = h - m_sup - 50   # Despues de titulo
+                        y3 = h - m_sup - 78   # Despues de acciones
+                        y4 = h - m_sup - 106  # Despues de montos
+                        y5 = h - m_sup - 134  # Despues de letras
+                        y6 = h - m_sup - 158  # Despues de concepto
                         
-                        c_pdf.line(m_izq, y_linea1, m_der, y_linea1)
-                        c_pdf.line(m_izq, y_linea2, m_der, y_linea2)
-                        c_pdf.line(m_izq, y_linea3, m_der, y_linea3)
-                        c_pdf.line(m_izq, y_linea4, m_der, y_linea4)
-                        c_pdf.line(m_izq, y_linea5, m_der, y_linea5)
+                        c_pdf.line(m_izq, y1, m_der, y1)
+                        c_pdf.line(m_izq, y2, m_der, y2)
+                        c_pdf.line(m_izq, y3, m_der, y3)
+                        c_pdf.line(m_izq, y4, m_der, y4)
+                        c_pdf.line(m_izq, y5, m_der, y5)
+                        c_pdf.line(m_izq, y6, m_der, y6)
                         
-                        # Linea vertical para separar numero de formulario
-                        c_pdf.line(m_der - 65, h - m_sup - 12, m_der - 65, h - m_sup - 52)
+                        # Linea vertical para separar serie/nro
+                        c_pdf.line(m_der - 70, h - m_sup - 12, m_der - 70, h - m_sup - 50)
                         
-                        # FONTE SANS SERIF (Helvetica es sans serif)
-                        c_pdf.setFont("Helvetica", 7)
+                        # ========== FILA 1: COOPROLE y SERIE (fuente 10pt) ==========
+                        c_pdf.setFont("Helvetica", 10)
                         c_pdf.drawString(m_izq + 3, h - m_sup - 10, "COOPROLE R.L.")
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 18, "COCHABAMBA - BOLIVIA")
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 26, f"Fecha: {f_pago}")
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 34, f"Hora: {h_pago}")
+                        c_pdf.drawString(m_izq + 3, h - m_sup - 20, "COCHABAMBA - BOLIVIA")
                         
-                        # Titulo principal en negrita sans serif
-                        c_pdf.setFont("Helvetica-Bold", 9)
-                        c_pdf.drawCentredString(w/2, h - m_sup - 22, "COMPROBANTE DE PAGO")
+                        c_pdf.setFont("Helvetica", 9)
+                        c_pdf.drawString(m_der - 65, h - m_sup - 10, f"SERIE: {socio.get('serie','')}")
+                        c_pdf.drawString(m_der - 65, h - m_sup - 20, f"{nombre_serie}")
+                        c_pdf.setFont("Helvetica-Bold", 11)
+                        c_pdf.drawString(m_der - 65, h - m_sup - 34, f"Nro: {f_num}")
                         
-                        # Serie y numero de formulario
-                        c_pdf.setFont("Helvetica", 7)
-                        c_pdf.drawString(m_der - 62, h - m_sup - 10, f"SERIE: {socio.get('serie','')}")
-                        c_pdf.drawString(m_der - 62, h - m_sup - 18, f"{socio.get('nombre_serie','')[:15]}")
-                        c_pdf.setFont("Helvetica-Bold", 8)
-                        c_pdf.drawString(m_der - 62, h - m_sup - 30, f"Nro: {f_num}")
+                        # ========== FILA 2: Fecha/Hora y TITULO (fuente 9pt) ==========
+                        c_pdf.setFont("Helvetica", 9)
+                        c_pdf.drawString(m_izq + 3, h - m_sup - 38, f"Fecha: {f_pago}")
+                        c_pdf.drawString(m_izq + 3, h - m_sup - 48, f"Hora: {h_pago}")
                         
-                        # Datos del titulo y acciones
-                        c_pdf.setFont("Helvetica", 7)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 45, f"TITULO: {datos.get('titulo')}")
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 55, f"Acciones: {acciones}")
-                        c_pdf.drawString(w/2 + 20, h - m_sup - 55, f"Valor: {importe_individual:.2f}")
+                        c_pdf.setFont("Helvetica-Bold", 10)
+                        c_pdf.drawCentredString(w/2, h - m_sup - 36, "COMPROBANTE DE PAGO")
                         
-                        # Monto total
-                        c_pdf.setFont("Helvetica-Bold", 8)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 68, f"Monto Total: {monto_t:.2f} Bs.")
-                        c_pdf.line(m_izq + 3, h - m_sup - 72, m_izq + 80, h - m_sup - 72)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 82, f"A Pagar: {monto_t:.2f} Bs.")
+                        # ========== FILA 3: Titulo y Acciones (fuente 9pt) ==========
+                        c_pdf.setFont("Helvetica", 9)
+                        c_pdf.drawString(m_izq + 3, h - m_sup - 62, f"TITULO: {datos.get('titulo')}")
+                        c_pdf.drawString(m_izq + 3, h - m_sup - 74, f"Acciones: {acciones}")
+                        c_pdf.drawString(w/2 + 30, h - m_sup - 74, f"Valor: {importe_individual:.2f} Bs.")
                         
-                        # Monto en letras
-                        c_pdf.setFont("Helvetica", 6)
+                        # ========== FILA 4: Montos (fuente 10pt negrita) ==========
+                        c_pdf.setFont("Helvetica-Bold", 10)
+                        c_pdf.drawString(m_izq + 3, h - m_sup - 94, f"Monto Total: {monto_t:.2f} Bs.")
+                        c_pdf.line(m_izq + 3, h - m_sup - 98, m_izq + 80, h - m_sup - 98)
+                        c_pdf.drawString(m_izq + 3, h - m_sup - 108, f"A Pagar: {monto_t:.2f} Bs.")
+                        
+                        # ========== FILA 5: Monto en letras (fuente 8pt) ==========
+                        c_pdf.setFont("Helvetica", 8)
                         texto_letras = monto_a_letras(monto_t)
-                        if len(texto_letras) > 40:
-                            texto_letras = texto_letras[:40]
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 94, f"Son: {texto_letras}")
+                        c_pdf.drawString(m_izq + 3, h - m_sup - 126, f"Son: {texto_letras}")
                         
-                        # Concepto
-                        c_pdf.setFont("Helvetica", 6)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 106, "Concepto: PAGO DE DIVIDENDOS PROLEC S.A.")
-                        c_pdf.drawString(w/2 + 10, h - m_sup - 106, "Gestion: 2025")
+                        # ========== FILA 6: Concepto (fuente 8pt) ==========
+                        c_pdf.setFont("Helvetica", 8)
+                        c_pdf.drawString(m_izq + 3, h - m_sup - 148, "Concepto: PAGO DE DIVIDENDOS PROLEC S.A.")
+                        c_pdf.drawString(w/2 + 20, h - m_sup - 148, "Gestion: 2025")
                         
-                        # Cajero
-                        c_pdf.setFont("Helvetica", 6)
-                        c_pdf.drawString(m_izq + 3, m_inf + 36, f"Cajero: {c_nombre}")
+                        # ========== FILA 7: Cajero y Recibi Conforme (fuente 8pt) ==========
+                        c_pdf.setFont("Helvetica", 8)
+                        c_pdf.drawString(m_izq + 3, m_inf + 30, f"Cajero: {c_nombre}")
                         
-                        # Recibi conforme y firmas
-                        c_pdf.setFont("Helvetica", 6)
-                        c_pdf.drawString(m_izq + 60, m_inf + 36, f"Recibi Conforme: {datos.get('nombre')}")
-                        c_pdf.drawString(m_izq + 60, m_inf + 26, "Firma: ................................")
-                        c_pdf.drawString(m_der - 65, m_inf + 26, "C.I.: ................")
+                        # Recibi Conforme con nombre del socio
+                        c_pdf.drawString(m_izq + 70, m_inf + 30, f"Recibi Conforme: {nombre_socio}")
+                        c_pdf.drawString(m_izq + 70, m_inf + 18, "Firma: ................................")
+                        c_pdf.drawString(m_der - 70, m_inf + 18, "C.I.: ................")
                         
                         c_pdf.showPage()
                         c_pdf.save()
