@@ -107,111 +107,24 @@ else:
                     st.divider()
 
                     def generar_pdf_individual(datos, monto_t, c_nombre, f_pago, h_pago, n_form):
-                        # Tamaño cuarto de hoja carta: 10.5cm x 14cm
-                        ancho_cm = 10.5
-                        alto_cm = 14.0
-                        margen_cm = 0.7
-                        
-                        ancho_pts = ancho_cm * 28.3464567
-                        alto_pts = alto_cm * 28.3464567
-                        margen_pts = margen_cm * 28.3464567
-                        
-                        buf = io.BytesIO()
-                        c_pdf = canvas.Canvas(buf, pagesize=(ancho_pts, alto_pts))
-                        w = ancho_pts
-                        h = alto_pts
-                        
-                        f_num = str(n_form).zfill(5)
-                        m_sup = margen_pts
-                        m_izq = margen_pts
-                        m_der = w - margen_pts
-                        m_inf = margen_pts
-                        
-                        # Limpiar y acortar nombre del socio si es muy largo
-                        nombre_socio = datos.get('nombre', '')
-                        if len(nombre_socio) > 30:
-                            nombre_socio = nombre_socio[:28] + '...'
-                        
-                        # Limpiar nombre de serie
-                        nombre_serie = socio.get('nombre_serie', '')
-                        if len(nombre_serie) > 12:
-                            nombre_serie = nombre_serie[:10]
-                        
-                        # Rectangulo principal
-                        c_pdf.setLineWidth(0.5)
-                        c_pdf.rect(m_izq, m_inf, m_der - m_izq, h - m_sup - m_inf)
-                        
-                        # Lineas horizontales divisorias - mejor distribuidas
-                        y1 = h - m_sup - 22   # Despues de encabezado
-                        y2 = h - m_sup - 50   # Despues de titulo
-                        y3 = h - m_sup - 78   # Despues de acciones
-                        y4 = h - m_sup - 106  # Despues de montos
-                        y5 = h - m_sup - 134  # Despues de letras
-                        y6 = h - m_sup - 158  # Despues de concepto
-                        
-                        c_pdf.line(m_izq, y1, m_der, y1)
-                        c_pdf.line(m_izq, y2, m_der, y2)
-                        c_pdf.line(m_izq, y3, m_der, y3)
-                        c_pdf.line(m_izq, y4, m_der, y4)
-                        c_pdf.line(m_izq, y5, m_der, y5)
-                        c_pdf.line(m_izq, y6, m_der, y6)
-                        
-                        # Linea vertical para separar serie/nro
-                        c_pdf.line(m_der - 70, h - m_sup - 12, m_der - 70, h - m_sup - 50)
-                        
-                        # ========== FILA 1: COOPROLE y SERIE (fuente 10pt) ==========
-                        c_pdf.setFont("Helvetica", 10)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 10, "COOPROLE R.L.")
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 20, "COCHABAMBA - BOLIVIA")
-                        
-                        c_pdf.setFont("Helvetica", 9)
-                        c_pdf.drawString(m_der - 65, h - m_sup - 10, f"SERIE: {socio.get('serie','')}")
-                        c_pdf.drawString(m_der - 65, h - m_sup - 20, f"{nombre_serie}")
-                        c_pdf.setFont("Helvetica-Bold", 11)
-                        c_pdf.drawString(m_der - 65, h - m_sup - 34, f"Nro: {f_num}")
-                        
-                        # ========== FILA 2: Fecha/Hora y TITULO (fuente 9pt) ==========
-                        c_pdf.setFont("Helvetica", 9)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 38, f"Fecha: {f_pago}")
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 48, f"Hora: {h_pago}")
-                        
-                        c_pdf.setFont("Helvetica-Bold", 10)
-                        c_pdf.drawCentredString(w/2, h - m_sup - 36, "COMPROBANTE DE PAGO")
-                        
-                        # ========== FILA 3: Titulo y Acciones (fuente 9pt) ==========
-                        c_pdf.setFont("Helvetica", 9)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 62, f"TITULO: {datos.get('titulo')}")
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 74, f"Acciones: {acciones}")
-                        c_pdf.drawString(w/2 + 30, h - m_sup - 74, f"Valor: {importe_individual:.2f} Bs.")
-                        
-                        # ========== FILA 4: Montos (fuente 10pt negrita) ==========
-                        c_pdf.setFont("Helvetica-Bold", 10)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 94, f"Monto Total: {monto_t:.2f} Bs.")
-                        c_pdf.line(m_izq + 3, h - m_sup - 98, m_izq + 80, h - m_sup - 98)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 108, f"A Pagar: {monto_t:.2f} Bs.")
-                        
-                        # ========== FILA 5: Monto en letras (fuente 8pt) ==========
-                        c_pdf.setFont("Helvetica", 8)
-                        texto_letras = monto_a_letras(monto_t)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 126, f"Son: {texto_letras}")
-                        
-                        # ========== FILA 6: Concepto (fuente 8pt) ==========
-                        c_pdf.setFont("Helvetica", 8)
-                        c_pdf.drawString(m_izq + 3, h - m_sup - 148, "Concepto: PAGO DE DIVIDENDOS PROLEC S.A.")
-                        c_pdf.drawString(w/2 + 20, h - m_sup - 148, "Gestion: 2025")
-                        
-                        # ========== FILA 7: Cajero y Recibi Conforme (fuente 8pt) ==========
-                        c_pdf.setFont("Helvetica", 8)
-                        c_pdf.drawString(m_izq + 3, m_inf + 30, f"Cajero: {c_nombre}")
-                        
-                        # Recibi Conforme con nombre del socio
-                        c_pdf.drawString(m_izq + 70, m_inf + 30, f"Recibi Conforme: {nombre_socio}")
-                        c_pdf.drawString(m_izq + 70, m_inf + 18, "Firma: ................................")
-                        c_pdf.drawString(m_der - 70, m_inf + 18, "C.I.: ................")
-                        
-                        c_pdf.showPage()
-                        c_pdf.save()
-                        return buf.getvalue()
+                        buf = io.BytesIO(); c_pdf = canvas.Canvas(buf, pagesize=portrait(letter)); w, h = portrait(letter)
+                        f_num = str(n_form).zfill(5); m_sup = 20; m_izq = 20; m_der = w - 20
+                        c_pdf.setLineWidth(0.8); c_pdf.rect(m_izq, h - (m_sup + 360), m_der - m_izq, 360)
+                        c_pdf.line(m_izq, h - (m_sup + 100), m_der, h - (m_sup + 100)) 
+                        c_pdf.line(m_izq, h - (m_sup + 160), m_der, h - (m_sup + 160)) 
+                        c_pdf.line(m_izq, h - (m_sup + 250), m_der, h - (m_sup + 250)) 
+                        c_pdf.line(m_izq, h - (m_sup + 310), m_der, h - (m_sup + 310)) 
+                        c_pdf.line(m_izq + 120, h - (m_sup + 310), m_izq + 120, h - (m_sup + 360)) 
+                        # CAMBIO: Reemplazar Helvetica por Arial (fuente sans serif)
+                        c_pdf.setFont("Arial", 9); c_pdf.drawString(m_izq + 10, h - (m_sup + 25), "COOPROLE R.L."); c_pdf.drawString(m_izq + 10, h - (m_sup + 40), "COCHABAMBA - BOLIVIA"); c_pdf.drawString(m_izq + 10, h - (m_sup + 55), f"Fecha : {f_pago}"); c_pdf.drawString(m_izq + 10, h - (m_sup + 70), f"Hora  : {h_pago}")
+                        c_pdf.setFont("Arial-Bold", 12); c_pdf.drawCentredString(w/2, h - (m_sup + 50), "COMPROBANTE DE PAGO")
+                        c_pdf.setFont("Arial", 10); c_pdf.drawString(m_der - 150, h - (m_sup + 25), f"SERIE:    {socio.get('serie','')}"); c_pdf.drawString(m_der - 150, h - (m_sup + 40), f"{socio.get('nombre_serie','')}"); c_pdf.setFont("Arial-Bold", 11); c_pdf.drawString(m_der - 150, h - (m_sup + 60), f"Nro :    {f_num}")
+                        c_pdf.setFont("Arial", 10); c_pdf.drawString(m_izq + 120, h - (m_sup + 120), f"TITULO:    {datos.get('titulo')}"); c_pdf.drawString(m_izq + 10, h - (m_sup + 140), f"Numero de Acciones:    {acciones}"); c_pdf.drawString(w/2 + 40, h - (m_sup + 140), f"Importe por accion:    {importe_individual:.2f}")
+                        c_pdf.setFont("Arial-Bold", 11); c_pdf.drawString(w/2 - 40, h - (m_sup + 190), f"Monto Total (Bs.):    {monto_t:.2f}"); c_pdf.line(w/2 - 40, h - (m_sup + 205), w/2 + 100, h - (m_sup + 205)); c_pdf.drawString(w/2 - 40, h - (m_sup + 230), f"Importe a Pagar Bs.:    {monto_t:.2f}")
+                        c_pdf.setFont("Arial", 10); c_pdf.drawString(m_izq + 10, h - (m_sup + 270), f"Son:    {monto_a_letras(monto_t)}"); c_pdf.drawString(m_der - 80, h - (m_sup + 270), "(Bs.-)")
+                        c_pdf.drawString(m_izq + 10, h - (m_sup + 295), "Concepto: PAGO DE DIVIDENDOS PROLEC S.A."); c_pdf.drawString(w/2 + 20, h - (m_sup + 295), "Gestion:    2025")
+                        c_pdf.setFont("Arial", 8); c_pdf.drawString(m_izq + 5, h - (m_sup + 345), f"Cajero: {c_nombre}"); c_pdf.setFont("Arial", 9); c_pdf.drawString(m_izq + 130, h - (m_sup + 330), f"Recibi Conforme:    {datos.get('nombre')}"); c_pdf.drawString(m_izq + 130, h - (m_sup + 350), "Firma: ..............................................."); c_pdf.drawString(m_der - 140, h - (m_sup + 350), "C.I. ..........................")
+                        c_pdf.showPage(); c_pdf.save(); return buf.getvalue()
 
                     if socio.get("pagado"):
                         st.subheader(" YA FUE PAGADO POR")
@@ -308,7 +221,7 @@ else:
                             if not st.session_state.confirmar_reversion:
                                 if st.button("ANULAR FORMULARIO"): st.session_state.confirmar_reversion = True; st.rerun()
                             else:
-                                st.error("SEGURO?"); c_s, c_n = st.columns(2)
+                                st.error("¿SEGURO?"); c_s, c_n = st.columns(2)
                                 with c_s:
                                     if st.button("SI, ANULAR"):
                                         ahora = datetime.datetime.now(tz_bol); datos_anulados = socio_rev.copy()
@@ -317,11 +230,11 @@ else:
                                         supabase.table("riego").update({"pagado": False, "cajero": None, "fecha": None, "hora": None, "nro_formulario": None}).eq("nro_formulario", int(t_busca)).execute()
                                         st.session_state.mensaje_exito_rev = f"Anulado nro {t_busca}"; st.session_state.confirmar_reversion = False; st.session_state.rev_search_key += 1; st.rerun()
                                 with c_n:
-                                    if st.button("NO, CANCELAR"): st.session_state.confirmar_reversion = False; st.rerun()
-                        else: st.error("ERROR: Solo Administrador puede anular otros dias/cajeros.")
-                    else: st.error("No se encontro un cobro activo con ese numero de formulario.")
+                                    if st.button("NO, VOLVER"): st.session_state.confirmar_reversion = False; st.rerun()
+                        else: st.error("ERROR: Solo Administrador puede anular otros días/cajeros.")
+                    else: st.error("No se encontró un cobro activo con ese número de formulario.")
                 except Exception as e: st.error(f"Error en la base de datos: {e}")
-            else: st.error("Por favor, ingrese solo numeros para el formulario.")
+            else: st.error("Por favor, ingrese solo números para el formulario.")
 
     # --- OPCION 4: REPORTE DE REVERSIONES ---
     elif menu == "Reporte de Reversiones":
