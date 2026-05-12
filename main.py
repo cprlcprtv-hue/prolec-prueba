@@ -107,26 +107,83 @@ else:
                     st.divider()
 
                     def generar_pdf_individual(datos, monto_t, c_nombre, f_pago, h_pago, n_form):
-                        buf = io.BytesIO(); c_pdf = canvas.Canvas(buf, pagesize=portrait(letter)); w, h = portrait(letter)
-                        f_num = str(n_form).zfill(5); m_sup = 20; m_izq = 20; m_der = w - 20
-                        c_pdf.setLineWidth(0.8); c_pdf.rect(m_izq, h - (m_sup + 360), m_der - m_izq, 360)
-                        c_pdf.line(m_izq, h - (m_sup + 100), m_der, h - (m_sup + 100)) 
-                        c_pdf.line(m_izq, h - (m_sup + 160), m_der, h - (m_sup + 160)) 
-                        c_pdf.line(m_izq, h - (m_sup + 250), m_der, h - (m_sup + 250)) 
-                        c_pdf.line(m_izq, h - (m_sup + 310), m_der, h - (m_sup + 310)) 
-                        c_pdf.line(m_izq + 120, h - (m_sup + 310), m_izq + 120, h - (m_sup + 360)) 
-                        # CAMBIO 1: Usar fuente sans serif (Helvetica es sans serif, se mantiene pero aseguramos)
-                        c_pdf.setFont("Helvetica", 9); c_pdf.drawString(m_izq + 10, h - (m_sup + 25), "COOPROLE R.L."); c_pdf.drawString(m_izq + 10, h - (m_sup + 40), "COCHABAMBA - BOLIVIA"); c_pdf.drawString(m_izq + 10, h - (m_sup + 55), f"Fecha : {f_pago}"); c_pdf.drawString(m_izq + 10, h - (m_sup + 70), f"Hora  : {h_pago}")
-                        c_pdf.setFont("Helvetica-Bold", 12); c_pdf.drawCentredString(w/2, h - (m_sup + 50), "COMPROBANTE DE PAGO")
-                        c_pdf.setFont("Helvetica", 10); c_pdf.drawString(m_der - 150, h - (m_sup + 25), f"SERIE:    {socio.get('serie','')}"); c_pdf.drawString(m_der - 150, h - (m_sup + 40), f"{socio.get('nombre_serie','')}"); c_pdf.setFont("Helvetica-Bold", 11); c_pdf.drawString(m_der - 150, h - (m_sup + 60), f"Nro :    {f_num}")
-                        c_pdf.setFont("Helvetica", 10); c_pdf.drawString(m_izq + 120, h - (m_sup + 120), f"TITULO:    {datos.get('titulo')}"); c_pdf.drawString(m_izq + 10, h - (m_sup + 140), f"Numero de Acciones:    {acciones}"); c_pdf.drawString(w/2 + 40, h - (m_sup + 140), f"Importe por accion:    {importe_individual:.2f}")
-                        c_pdf.setFont("Helvetica-Bold", 11); c_pdf.drawString(w/2 - 40, h - (m_sup + 190), f"Monto Total (Bs.):    {monto_t:.2f}"); c_pdf.line(w/2 - 40, h - (m_sup + 205), w/2 + 100, h - (m_sup + 205)); c_pdf.drawString(w/2 - 40, h - (m_sup + 230), f"Importe a Pagar Bs.:    {monto_t:.2f}")
-                        c_pdf.setFont("Helvetica", 10); c_pdf.drawString(m_izq + 10, h - (m_sup + 270), f"Son:    {monto_a_letras(monto_t)}"); c_pdf.drawString(m_der - 80, h - (m_sup + 270), "(Bs.-)")
-                        c_pdf.drawString(m_izq + 10, h - (m_sup + 295), "Concepto: PAGO DE DIVIDENDOS PROLEC S.A."); c_pdf.drawString(w/2 + 20, h - (m_sup + 295), "Gestion:    2025")
-                        c_pdf.setFont("Helvetica", 8); c_pdf.drawString(m_izq + 5, h - (m_sup + 345), f"Cajero: {c_nombre}")
-                        # CAMBIO 2: Bajar "Recibi Conforme" y la línea de firma 15 puntos más abajo (de -330 a -315 y de -350 a -335)
-                        c_pdf.setFont("Helvetica", 9); c_pdf.drawString(m_izq + 130, h - (m_sup + 315), f"Recibi Conforme:    {datos.get('nombre')}"); c_pdf.drawString(m_izq + 130, h - (m_sup + 335), "Firma: ..............................................."); c_pdf.drawString(m_der - 140, h - (m_sup + 350), "C.I. ..........................")
-                        c_pdf.showPage(); c_pdf.save(); return buf.getvalue()
+                        # Convertir cm a puntos (1 cm = 28.3464567 puntos)
+                        # 10.5 cm ancho = 297.637 puntos
+                        # 14 cm largo = 396.850 puntos
+                        ancho_cm = 10.5
+                        largo_cm = 14.0
+                        margen_cm = 0.7
+                        
+                        ancho_pts = ancho_cm * 28.3464567
+                        largo_pts = largo_cm * 28.3464567
+                        margen_pts = margen_cm * 28.3464567
+                        
+                        buf = io.BytesIO()
+                        from reportlab.lib.pagesizes import landscape
+                        c_pdf = canvas.Canvas(buf, pagesize=(ancho_pts, largo_pts))
+                        w = ancho_pts
+                        h = largo_pts
+                        
+                        f_num = str(n_form).zfill(5)
+                        m_sup = margen_pts
+                        m_izq = margen_pts
+                        m_der = w - margen_pts
+                        
+                        # Calcular altura del rectangulo proporcionada
+                        alto_rect = h - (m_sup * 2)
+                        c_pdf.setLineWidth(0.8)
+                        c_pdf.rect(m_izq, m_sup, m_der - m_izq, alto_rect)
+                        
+                        # Lineas divisorias ajustadas proporcionalmente
+                        c_pdf.line(m_izq, h - (m_sup + 100), m_der, h - (m_sup + 100))
+                        c_pdf.line(m_izq, h - (m_sup + 140), m_der, h - (m_sup + 140))
+                        c_pdf.line(m_izq, h - (m_sup + 180), m_der, h - (m_sup + 180))
+                        c_pdf.line(m_izq, h - (m_sup + 220), m_der, h - (m_sup + 220))
+                        c_pdf.line(m_izq + 80, h - (m_sup + 220), m_izq + 80, h - (m_sup + 260))
+                        
+                        c_pdf.setFont("Helvetica", 7)
+                        c_pdf.drawString(m_izq + 5, h - (m_sup + 18), "COOPROLE R.L.")
+                        c_pdf.drawString(m_izq + 5, h - (m_sup + 28), "COCHABAMBA - BOLIVIA")
+                        c_pdf.drawString(m_izq + 5, h - (m_sup + 38), f"Fecha : {f_pago}")
+                        c_pdf.drawString(m_izq + 5, h - (m_sup + 48), f"Hora  : {h_pago}")
+                        
+                        c_pdf.setFont("Helvetica-Bold", 9)
+                        c_pdf.drawCentredString(w/2, h - (m_sup + 35), "COMPROBANTE DE PAGO")
+                        
+                        c_pdf.setFont("Helvetica", 8)
+                        c_pdf.drawString(m_der - 110, h - (m_sup + 18), f"SERIE:    {socio.get('serie','')}")
+                        c_pdf.drawString(m_der - 110, h - (m_sup + 28), f"{socio.get('nombre_serie','')}")
+                        c_pdf.setFont("Helvetica-Bold", 9)
+                        c_pdf.drawString(m_der - 110, h - (m_sup + 42), f"Nro :    {f_num}")
+                        
+                        c_pdf.setFont("Helvetica", 8)
+                        c_pdf.drawString(m_izq + 85, h - (m_sup + 85), f"TITULO:    {datos.get('titulo')}")
+                        c_pdf.drawString(m_izq + 5, h - (m_sup + 100), f"Numero de Acciones:    {acciones}")
+                        c_pdf.drawString(w/2 + 20, h - (m_sup + 100), f"Valor:    {importe_individual:.2f}")
+                        
+                        c_pdf.setFont("Helvetica-Bold", 9)
+                        c_pdf.drawString(w/2 - 50, h - (m_sup + 135), f"Monto Total Bs.:    {monto_t:.2f}")
+                        c_pdf.line(w/2 - 50, h - (m_sup + 145), w/2 + 80, h - (m_sup + 145))
+                        c_pdf.drawString(w/2 - 50, h - (m_sup + 162), f"A Pagar Bs.:    {monto_t:.2f}")
+                        
+                        c_pdf.setFont("Helvetica", 7)
+                        c_pdf.drawString(m_izq + 5, h - (m_sup + 188), f"Son:    {monto_a_letras(monto_t)}")
+                        c_pdf.drawString(m_der - 60, h - (m_sup + 188), "(Bs.-)")
+                        
+                        c_pdf.drawString(m_izq + 5, h - (m_sup + 205), "Concepto: PAGO DE DIVIDENDOS PROLEC S.A.")
+                        c_pdf.drawString(w/2 + 10, h - (m_sup + 205), "Gestion: 2025")
+                        
+                        c_pdf.setFont("Helvetica", 6)
+                        c_pdf.drawString(m_izq + 5, h - (m_sup + 238), f"Cajero: {c_nombre}")
+                        
+                        c_pdf.setFont("Helvetica", 7)
+                        c_pdf.drawString(m_izq + 90, h - (m_sup + 220), f"Recibi Conforme:    {datos.get('nombre')}")
+                        c_pdf.drawString(m_izq + 90, h - (m_sup + 235), "Firma: ................................")
+                        c_pdf.drawString(m_der - 110, h - (m_sup + 248), "C.I. ..................")
+                        
+                        c_pdf.showPage()
+                        c_pdf.save()
+                        return buf.getvalue()
 
                     if socio.get("pagado"):
                         st.subheader(" YA FUE PAGADO POR")
@@ -223,7 +280,7 @@ else:
                             if not st.session_state.confirmar_reversion:
                                 if st.button("ANULAR FORMULARIO"): st.session_state.confirmar_reversion = True; st.rerun()
                             else:
-                                st.error("¿SEGURO?"); c_s, c_n = st.columns(2)
+                                st.error("SEGURO?"); c_s, c_n = st.columns(2)
                                 with c_s:
                                     if st.button("SI, ANULAR"):
                                         ahora = datetime.datetime.now(tz_bol); datos_anulados = socio_rev.copy()
@@ -233,10 +290,10 @@ else:
                                         st.session_state.mensaje_exito_rev = f"Anulado nro {t_busca}"; st.session_state.confirmar_reversion = False; st.session_state.rev_search_key += 1; st.rerun()
                                 with c_n:
                                     if st.button("NO, CANCELAR"): st.session_state.confirmar_reversion = False; st.rerun()
-                        else: st.error("ERROR: Solo Administrador puede anular otros días/cajeros.")
-                    else: st.error("No se encontró un cobro activo con ese número de formulario.")
+                        else: st.error("ERROR: Solo Administrador puede anular otros dias/cajeros.")
+                    else: st.error("No se encontro un cobro activo con ese numero de formulario.")
                 except Exception as e: st.error(f"Error en la base de datos: {e}")
-            else: st.error("Por favor, ingrese solo números para el formulario.")
+            else: st.error("Por favor, ingrese solo numeros para el formulario.")
 
     # --- OPCION 4: REPORTE DE REVERSIONES ---
     elif menu == "Reporte de Reversiones":
