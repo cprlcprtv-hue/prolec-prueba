@@ -140,7 +140,9 @@ else:
                                 if st.button("SI, CONFIRMAR"):
                                     res_max_ri = supabase.table("riego").select("nro_formulario").not_.is_("nro_formulario", "null").order("nro_formulario", desc=True).limit(1).execute()
                                     res_max_re = supabase.table("reversiones").select("nro_formulario").not_.is_("nro_formulario", "null").order("nro_formulario", desc=True).limit(1).execute()
-                                    nuevo_nro = max(int(res_max_ri.data[0]['nro_formulario']) if res_max_ri.data else 0, int(res_max_re.data[0]['nro_formulario']) if res_max_re.data else 0) + 1
+                                    max_ri = int(res_max_ri.data[0]['nro_formulario']) if res_max_ri.data and res_max_ri.data[0]['nro_formulario'] else 0
+                                    max_re = int(res_max_re.data[0]['nro_formulario']) if res_max_re.data and res_max_re.data[0]['nro_formulario'] else 0
+                                    nuevo_nro = str(max(max_ri, max_re) + 1).zfill(5)
                                     tz_bol = pytz.timezone('America/La_Paz'); ahora = datetime.datetime.now(tz_bol); f_hoy = ahora.strftime("%d/%m/%Y"); h_hoy = ahora.strftime("%H:%M:%S")
                                     supabase.table("riego").update({"pagado": True, "cajero": st.session_state.cajero, "fecha": f_hoy, "hora": h_hoy, "nro_formulario": nuevo_nro}).eq("titulo", socio.get("titulo")).execute()
                                     st.session_state.mensaje_exito_cobro = f"COBRO EXITOSO: {socio.get('nombre')} | Form: {str(nuevo_nro).zfill(5)}"
@@ -168,7 +170,7 @@ else:
             if res_pagos.data:
                 filtrados = [p for p in res_pagos.data if f_ini <= datetime.datetime.strptime(p['fecha'], "%d/%m/%Y").date() <= f_fin and (not series_sel or p['serie'] in series_sel) and (not cajeros_sel or p['cajero'] in cajeros_sel)]
                 if filtrados:
-                    filtrados.sort(key=lambda x: x.get('nro_formulario') or 0); buf_list = io.BytesIO(); c_list = canvas.Canvas(buf_list, pagesize=portrait(letter)); w, h = portrait(letter); items_per_page = 40; pages = [filtrados[i:i + items_per_page] for i in range(0, len(filtrados), items_per_page)]; total_dinero = sum(float(x.get('importe_accion') or 0) * int(float(x.get('acciones') or 0)) for x in filtrados)
+                    filtrados.sort(key=lambda x: int(str(x.get('nro_formulario') or '0'))); buf_list = io.BytesIO(); c_list = canvas.Canvas(buf_list, pagesize=portrait(letter)); w, h = portrait(letter); items_per_page = 40; pages = [filtrados[i:i + items_per_page] for i in range(0, len(filtrados), items_per_page)]; total_dinero = sum(float(x.get('importe_accion') or 0) * int(float(x.get('acciones') or 0)) for x in filtrados)
                     for idx, page_data in enumerate(pages):
                         if os.path.exists("logo_izquierdo.png"): c_list.drawImage("logo_izquierdo.png", 40, h - 65, width=65, height=65, preserveAspectRatio=True, mask='auto')
                         c_list.setFont("Helvetica-Bold", 14); c_list.drawCentredString(w/2, h - 35, "REPORTE DE COBROS DE DIVIDENDOS"); c_list.setFont("Helvetica", 9); c_list.drawCentredString(w/2, h - 50, f"Periodo: {f_ini.strftime('%d/%m/%Y')} al {f_fin.strftime('%d/%m/%Y')}")
