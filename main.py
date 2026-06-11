@@ -194,7 +194,7 @@ else:
                             c_list.drawCentredString(310, y_row, str(item.get('titulo')))
                             c_list.drawCentredString(370, y_row, (item.get('cajero') or "")[:15])
                             c_list.drawCentredString(440, y_row, f"{float(item.get('importe_accion')):.2f}")
-                            c_list.drawCentredString(495, y_row, f"{item.get('nro_formulario')}")
+                            c_list.drawCentredString(495, y_row, str(item.get('nro_formulario') or '').zfill(5))
                             c_list.drawCentredString(545, y_row, f"{sub:.2f}")
                             y_row -= 15 
                         if idx+1 == len(pages):
@@ -213,7 +213,7 @@ else:
             t_busca = form_busca_text.strip()
             if t_busca.isdigit():
                 try:
-                    res_rev = supabase.table("riego").select("*").eq("nro_formulario", int(t_busca)).eq("pagado", True).execute()
+                    res_rev = supabase.table("riego").select("*").eq("nro_formulario", str(int(t_busca)).zfill(5)).eq("pagado", True).execute()
                     if res_rev.data:
                         socio_rev = res_rev.data[0]; tz_bol = pytz.timezone('America/La_Paz'); hoy_bol = datetime.datetime.now(tz_bol).strftime("%d/%m/%Y")
                         rol = str(st.session_state.rol_usuario).strip()
@@ -228,7 +228,7 @@ else:
                                         ahora = datetime.datetime.now(tz_bol); datos_anulados = socio_rev.copy()
                                         datos_anulados.update({"fecha_reversion": ahora.strftime("%d/%m/%Y"), "hora_reversion": ahora.strftime("%H:%M:%S"), "cajero_reversion": st.session_state.cajero})
                                         supabase.table("reversiones").insert(datos_anulados).execute()
-                                        supabase.table("riego").update({"pagado": False, "cajero": None, "fecha": None, "hora": None, "nro_formulario": None}).eq("nro_formulario", int(t_busca)).execute()
+                                        supabase.table("riego").update({"pagado": False, "cajero": None, "fecha": None, "hora": None, "nro_formulario": None}).eq("nro_formulario", str(int(t_busca)).zfill(5)).execute()
                                         st.session_state.mensaje_exito_rev = f"Anulado nro {t_busca}"; st.session_state.confirmar_reversion = False; st.session_state.rev_search_key += 1; st.rerun()
                                 with c_n:
                                     if st.button("NO, CANCELAR"): st.session_state.confirmar_reversion = False; st.rerun()
