@@ -155,6 +155,7 @@ else:
                     st.error("El título buscado no existe en la lista")
             except Exception as e: st.error(f"Error: {e}")
 
+
     # --- OPCION 2: LISTADO DE COBROS ---
     elif menu == "Listado de Cobros":
         st.title("Reporte de Cobros Realizados")
@@ -194,7 +195,7 @@ else:
                             c_list.drawCentredString(310, y_row, str(item.get('titulo')))
                             c_list.drawCentredString(370, y_row, (item.get('cajero') or "")[:15])
                             c_list.drawCentredString(440, y_row, f"{float(item.get('importe_accion')):.2f}")
-                            c_list.drawCentredString(495, y_row, str(item.get('nro_formulario') or '').zfill(5))
+                            c_list.drawCentredString(495, y_row, f"{item.get('nro_formulario')}")
                             c_list.drawCentredString(545, y_row, f"{sub:.2f}")
                             y_row -= 15 
                         if idx+1 == len(pages):
@@ -203,7 +204,7 @@ else:
                         c_list.showPage()
                     c_list.save(); st.download_button("Descargar Reporte PDF", buf_list.getvalue(), "reporte_cobros.pdf")
                 else: st.warning("No hay registros.")
-
+    
     # --- OPCION 3: REVERSION DE COBROS ---
     elif menu == "Reversión de Cobros":
         st.title("Reversión / Anulación")
