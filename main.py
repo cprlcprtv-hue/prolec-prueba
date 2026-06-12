@@ -156,7 +156,7 @@ else:
             except Exception as e: st.error(f"Error: {e}")
 
 
-    # --- OPCION 2: LISTADO DE COBROS ---
+       # --- OPCION 2: LISTADO DE COBROS ---
     elif menu == "Listado de Cobros":
         st.title("Reporte de Cobros Realizados")
         c1, c2 = st.columns(2)
@@ -204,6 +204,39 @@ else:
                         c_list.showPage()
                     c_list.save(); st.download_button("Descargar Reporte PDF", buf_list.getvalue(), "reporte_cobros.pdf")
                 else: st.warning("No hay registros.")
+
+    # --- OPCION 3: REVERSION DE COBROS ---
+    elif menu == "Reversión de Cobros":
+        st.title("Reversión / Anulación")
+        if "mensaje_exito_rev" in st.session_state: st.success(st.session_state.mensaje_exito_rev); del st.session_state.mensaje_exito_rev
+        form_busca_text = st.text_input("Nro Formulario a anular:", key=f"rev_input_{st.session_state.rev_search_key}")
+        if form_busca_text:
+            t_busca = form_busca_text.strip()
+            if t_busca.isdigit():
+                try:
+                    res_rev = supabase.table("riego").select("*").eq("nro_formulario", str(int(t_busca)).zfill(5)).eq("pagado", True).execute()
+                    if res_rev.data:
+                        socio_rev = res_rev.data[0]; tz_bol = pytz.timezone('America/La_Paz'); hoy_bol = datetime.datetime.now(tz_bol).strftime("%d/%m/%Y")
+                        rol = str(st.session_state.rol_usuario).strip()
+                        if rol == "Administrador" or (socio_rev.get('cajero') == st.session_state.cajero and socio_rev.get('fecha') == hoy_bol):
+                            st.warning(f"Form: {t_busca} - Socio: {socio_rev.get('nombre')}"); 
+                            if not st.session_state.confirmar_reversion:
+                                if st.button("ANULAR FORMULARIO"): st.session_state.confirmar_reversion = True; st.rerun()
+                            else:
+                                st.error("¿SEGURO?"); c_s, c_n = st.columns(2)
+                                with c_s:
+                                    if st.button("SI, ANULAR"):
+                                        ahora = datetime.datetime.now(tz_bol); datos_anulados = socio_rev.copy()
+                                        datos_anulados.update({"fecha_reversion": ahora.strftime("%d/%m/%Y"), "hora_reversion": ahora.strftime("%H:%M:%S"), "cajero_reversion": st.session_state.cajero})
+                                        supabase.table("reversiones").insert(datos_anulados).execute()
+                                        supabase.table("riego").update({"pagado": False, "cajero": None, "fecha": None, "hora": None, "nro_formulario": None}).eq("nro_formulario", str(int(t_busca)).zfill(5)).execute()
+                                        st.session_state.mensaje_exito_rev = f"Anulado nro {t_busca}"; st.session_state.confirmar_reversion = False; st.session_state.rev_search_key += 1; st.rerun()
+                                with c_n:
+                                    if st.button("NO, CANCELAR"): st.session_state.confirmar_reversion = False; st.rerun()
+                        else: st.error("ERROR: Solo Administrador puede anular otros días/cajeros.")
+                    else: st.error("No se encontró un cobro activo con ese número de formulario.")
+                except Exception as e: st.error(f"Error en la base de datos: {e}")
+            else: st.error("Por favor, ingrese solo números para el formulario.")
     
     # --- OPCION 3: REVERSION DE COBROS ---
     elif menu == "Reversión de Cobros":
